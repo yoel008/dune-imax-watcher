@@ -1,0 +1,36 @@
+name: Check Dune Part 3 IMAX 70mm
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch: {}       # lets you click "Run workflow" to test manually
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run checker
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python checker.py
+
+      - name: Remember that we already notified (so it doesn't spam you)
+        run: |
+          if [ -f found.flag ]; then
+            git config user.name "dune-checker-bot"
+            git config user.email "actions@github.com"
+            git add found.flag
+            git commit -m "Mark as notified" || echo "Nothing to commit"
+            git push
+          fi
